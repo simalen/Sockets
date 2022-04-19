@@ -108,29 +108,30 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
     /* Service all the sockets with input pending */
-    for(i = 0; i < FD_SETSIZE; ++i) 
+    for(i = 0; i < FD_SETSIZE; ++i) {
       if(FD_ISSET(i, &readFdSet)) {
-	if(i == sock) {
-	  /* Connection request on original socket */
-	  size = sizeof(struct sockaddr_in);
-	  /* Accept the connection request from a client. */
-	  clientSocket = accept(sock, (struct sockaddr *)&clientName, (socklen_t *)&size); 
-	  if(clientSocket < 0) {
-	    perror("Could not accept connection\n");
-	    exit(EXIT_FAILURE);
-	  }
-	  printf("Server: Connect from client %s, port %d\n", 
-		 inet_ntoa(clientName.sin_addr), 
-		 ntohs(clientName.sin_port));
-	  FD_SET(clientSocket, &activeFdSet);
-	}
-	else {
-	  /* Data arriving on an already connected socket */
-	  if(readMessageFromClient(i) < 0) {
-	    close(i);
-	    FD_CLR(i, &activeFdSet);
-	  }
-	}
+	      if(i == sock) {
+	        /* Connection request on original socket */
+	        size = sizeof(struct sockaddr_in);
+	        /* Accept the connection request from a client. */
+	        clientSocket = accept(sock, (struct sockaddr *)&clientName, (socklen_t *)&size); 
+	        if(clientSocket < 0) {
+	          perror("Could not accept connection\n");
+	          exit(EXIT_FAILURE);
+	        }
+	        printf("Server: Connect from client %s, port %d\n", 
+	      	 inet_ntoa(clientName.sin_addr), 
+	      	 ntohs(clientName.sin_port));
+	        FD_SET(clientSocket, &activeFdSet);
+	      }
+	      else {
+	        /* Data arriving on an already connected socket */
+	        if(readMessageFromClient(i) < 0) {
+	          close(i);
+	          FD_CLR(i, &activeFdSet);
+	        }
+	      }
       }
+    }  
   }
 }

@@ -61,21 +61,6 @@ int readMessageFromServer(int fileDescriptor) {
   return(0);
 }
 
-// (Labb 2) Använder trådar för att läsa meddelande från servern.
-void *clientConnected(void * args) {
-  int * sock = (int *) args;
-  while(1) {
-    readMessageFromServer(*sock);
-  }
-  return NULL;
-}
-
-// (Labb 2) Använder trådar för att läsa meddelande från servern.
-void newThread(int * sock) {
-  pthread_t thread_id;
-  pthread_create(&thread_id, NULL, clientConnected, (void *)sock);
-}
-
 /* writeMessage
  * Writes the string message to the file (socket) 
  * denoted by fileDescriptor.
@@ -95,6 +80,8 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in serverName;
   char hostName[hostNameLength];
   char messageString[messageLength];
+
+  fd_set activeFdSet, readFdSet;
 
   /* Check arguments */
   if(argv[1] == NULL) {
@@ -122,18 +109,35 @@ int main(int argc, char *argv[]) {
   printf("\nType something and press [RETURN] to send it to the server.\n");
   printf("Type 'quit' to nuke this program.\n");
   fflush(stdin);
+
+  FD_ZERO(&activeFdSet);
+  FD_SET(sock, &activeFdSet);
+  //FD_SET(stdin, &activeFdSet);
+
   while(1) {
+    readFdSet = activeFdSet;
+
     printf("\n>");
     fgets(messageString, messageLength, stdin);
+
+    if(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) < 0) {
+      perror("Select failed\n");
+      exit(EXIT_FAILURE);
+    }
+
+    for(int i = 0; i < FD_SETSIZE; ++i) {
+      if(FD_ISSET(i, &readFdSet))  {
+        readMessageFromServer(sock);
+        if(i != sock) {
+          printf("Hello");
+        }
+      }
+    }
+    
     messageString[messageLength - 1] = '\0';
     if(strncmp(messageString,"quit\n",messageLength) != 0) {
-      writeMessage(sock, messageString);
-
-      // (Labb 2) Läser meddelandet från servern (ACK:et), Eftersom att clientConnected() redan läser av meddelandet
-      // så behövs inte den här avkommenteras.
-      
-      // if(readMessageFromServer(sock) == 0)
-    }
+      //writeMessage(sock, messageString);
+    }  
     else {  
       close(sock);
       exit(EXIT_SUCCESS);

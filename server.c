@@ -16,7 +16,6 @@
 
 #define PORT 5555
 #define MAXMSG 512
-#define MAXCLIENTS 128
 
 /* makeSocket
  * Creates and names a socket in the Internet
@@ -91,27 +90,14 @@ void writeMessage(int fileDescriptor, char *message) {
   }
 }
 
-void addClient(int socket, int sockets[], int * index) {
-  sockets[(*index)++] = socket;
-}
-
-void broadcast(int sockets[], int * index) {
-  for(int i = 0; i < *index; i++) {
-    writeMessage(sockets[i], "New client connected.");
-  }
-}
-
 int main(int argc, char *argv[]) {
-  int index = 0; // (Labb 2)
-  int sockets[MAXCLIENTS] = { 0 }; // (Labb 2)
   int sock;
   int clientSocket;
   int i;
-  fd_set inactiveFdSet, activeFdSet, readFdSet; /* Used by select */
+  fd_set activeFdSet, readFdSet; /* Used by select */
   struct sockaddr_in clientName;
   socklen_t size;
   
- 
   /* Create a socket and set it up to accept connections */
   sock = makeSocket(PORT);
   /* Listen for connection requests from clients */
@@ -145,12 +131,9 @@ int main(int argc, char *argv[]) {
 	          exit(EXIT_FAILURE);
 	        }
 
-          //(Labb 2) Så här gör man för att loopa igenom ett fd_set.
-          
-          //select(FD_SETSIZE, &, NULL, NULL, NULL);
-          //for(int j; j < FD_SETSIZE; ++j) {
+          //for(int j = 0; j < FD_SETSIZE; ++j) {
           //  if(FD_ISSET(j, &activeFdSet)) {
-          //    writeMessage(j, "New client connected");
+          //    writeMessage(j, "New client connected.");
           //  }
           //}
 
@@ -158,11 +141,6 @@ int main(int argc, char *argv[]) {
 	      	 inet_ntoa(clientName.sin_addr), 
 	      	 ntohs(clientName.sin_port));
 	        FD_SET(clientSocket, &activeFdSet);
-
-          //(Labb 2) Använder arrays istället för fd_set.
-
-          broadcast(sockets, &index);
-	        addClient(clientSocket, sockets, &index);
 	      }
 	      else {
 	        /* Data arriving on an already connected socket */
@@ -170,9 +148,9 @@ int main(int argc, char *argv[]) {
 	          close(i);
 	          FD_CLR(i, &activeFdSet);
 	        }
-	        writeMessage(clientSocket, "Reply from server\n");
+          writeMessage(clientSocket, "Reply from server");
 	      }
       }
-    }
+    }  
   }
 }

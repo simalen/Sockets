@@ -4,6 +4,13 @@
  * then type 'client lab1-6.idt.mdh.se' and follow the on-screen instructions.
  */
 
+ /* Labb 2.
+  * Following instructions in the pdf provided we have altered the code for server.c and client.c.
+  * Altered code is commented with a '(Labb 2)'.
+  *
+  * Authors: Simon Alen, Mohamad Almalat.
+  */
+
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -39,7 +46,7 @@ void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short 
   name->sin_addr = *(struct in_addr *)hostInfo->h_addr;
 }
 
-// (Labb 2) server.c , readMessageFromClient();
+// (Labb 2) Copy of server.c , readMessageFromClient();
 int readMessageFromServer(int fileDescriptor) {
   char buffer[MAXMSG];
   int nOfBytes;
@@ -80,8 +87,7 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in serverName;
   char hostName[hostNameLength];
   char messageString[messageLength];
-
-  fd_set activeFdSet, readFdSet;
+  fd_set activeFdSet, readFdSet; // (Labb 2) fd_set that we use to simultaneously write incoming data as well as recieve user input.
 
   /* Check arguments */
   if(argv[1] == NULL) {
@@ -110,37 +116,39 @@ int main(int argc, char *argv[]) {
   printf("Type 'quit' to nuke this program.\n");
   fflush(stdin);
 
+  // (Labb 2) We set both the sock and stdin (0) as present in set. This way we can get input from both simultaneously.
   FD_ZERO(&activeFdSet);
   FD_SET(sock, &activeFdSet);
-  //FD_SET(stdin, &activeFdSet);
+  FD_SET(0, &activeFdSet);
 
   while(1) {
     readFdSet = activeFdSet;
 
-    printf("\n>");
-    fgets(messageString, messageLength, stdin);
-
+    // (Labb 2) Selects socket
     if(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) < 0) {
       perror("Select failed\n");
       exit(EXIT_FAILURE);
     }
 
-    for(int i = 0; i < FD_SETSIZE; ++i) {
-      if(FD_ISSET(i, &readFdSet))  {
-        readMessageFromServer(sock);
-        if(i != sock) {
-          printf("Hello");
-        }
+    // (Labb 2) Checks if input is pending. If it has input ready, readMessage. Otherwise check user input.
+    if(FD_ISSET(sock, &readFdSet))  {
+      if(readMessageFromServer(sock) < 0) {
+        close(sock);
       }
     }
-    
-    messageString[messageLength - 1] = '\0';
-    if(strncmp(messageString,"quit\n",messageLength) != 0) {
-      //writeMessage(sock, messageString);
-    }  
-    else {  
-      close(sock);
-      exit(EXIT_SUCCESS);
-    }
+
+    // (Labb 2) Check user input
+    else {
+      printf("\n>");
+      fgets(messageString, messageLength, stdin);
+      messageString[messageLength - 1] = '\0';
+      if(strncmp(messageString,"quit\n",messageLength) != 0) {
+        writeMessage(sock, messageString);
+      }
+      else {  
+       close(sock);
+       exit(EXIT_SUCCESS);
+      }
+    } 
   }
 }

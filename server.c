@@ -2,6 +2,13 @@
  * Trying out socket communication between processes using the Internet protocol family.
  */
 
+ /* Labb 2.
+  * Following instructions in the pdf provided we have altered the code for server.c and client.c.
+  * Altered code is commented with a '(Labb 2)'.
+  *
+  * Authors: Simon Alen, Mohamad Almalat.
+  */
+
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -16,6 +23,7 @@
 
 #define PORT 5555
 #define MAXMSG 512
+#define BLOCKED_IP "192.168.0.72"
 
 /* makeSocket
  * Creates and names a socket in the Internet
@@ -79,7 +87,7 @@ int readMessageFromClient(int fileDescriptor) {
   return(0);
 }
 
-//(Labb 2) client.c , writeMessage();
+// (Labb 2) Copy of client.c , writeMessage();
 void writeMessage(int fileDescriptor, char *message) {
   int nOfBytes;
   
@@ -125,17 +133,27 @@ int main(int argc, char *argv[]) {
 	        /* Connection request on original socket */
 	        size = sizeof(struct sockaddr_in);
 	        /* Accept the connection request from a client. */
+          
 	        clientSocket = accept(sock, (struct sockaddr *)&clientName, (socklen_t *)&size); 
 	        if(clientSocket < 0) {
 	          perror("Could not accept connection\n");
 	          exit(EXIT_FAILURE);
 	        }
 
-          //for(int j = 0; j < FD_SETSIZE; ++j) {
-          //  if(FD_ISSET(j, &activeFdSet)) {
-          //    writeMessage(j, "New client connected.");
-          //  }
-          //}
+          // (Labb 2) Check if new client has IP-address.
+          // It works by comparing the addresses as strings.
+          if(!(strncmp(inet_ntoa(clientName.sin_addr), BLOCKED_IP, strlen(inet_ntoa(clientName.sin_addr))))) {
+            close(sock);
+            continue;
+          }
+
+          // (Labb 2) Broadcasts to all clients.
+          // It 'iterates' through the fd_set activeFdSet (Current active clients) and sends a message.
+          for(int j = 0; j < FD_SETSIZE; ++j) {
+            if(FD_ISSET(j, &activeFdSet) && j != sock) {
+              writeMessage(j, "New client connected.");
+            }
+          }
 
 	        printf("Server: Connect from client %s, port %d\n", 
 	      	 inet_ntoa(clientName.sin_addr), 
@@ -148,7 +166,8 @@ int main(int argc, char *argv[]) {
 	          close(i);
 	          FD_CLR(i, &activeFdSet);
 	        }
-          writeMessage(clientSocket, "Reply from server");
+          // (Labb 2) Replies to the client sending the message.
+          writeMessage(i, "Reply from server");
 	      }
       }
     }  
